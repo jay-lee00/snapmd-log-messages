@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="LogMessagesViewerApp">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SnapMD Log Messages</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <style>
+    .push-it-down {
+        margin-top: 60px;
+    }
+	.alert {
+		overflow: scroll;
+	}
+	.someTopSpace {
+		margin-top: 10px;
+	}
+    .clickable {
+        cursor: pointer;
+    }
+    table, th, td {
+        outline: solid lightgrey thin;
+        text-align: center;
+        padding: 2px;
+    }
+    </style>
+</head>
+<body ng-controller="msgLogViewerController">
+    <span us-spinner="{radius:30, width:8, length: 16}"></span>
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">{{title}}</a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="#" title="click to update" ng-click="snapmdRootModalOpen()">API Root: {{snapmdRoot.apiRoot}}</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+    <form autocomplete="on">
+  	<div class="container push-it-down">
+      	<div class="panel panel-default" >
+          	<div class="panel-heading">
+              	Login
+          	</div>
+          	<div class="panel-body">
+				<input ng-model="emailAddress" name="snapmdEmailAddress" class="input-sm" type="text" placeholder="Email Address">
+				<input ng-model="userPassword" name="snapmdUserPassword" class="input-sm" type="password" placeholder="password">
+                <button type="button" class="btn btn-default btn-lg" ng-click="doGetToken();">
+                    <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span>Login
+                </button>
+                <label ng-show="showSaveLogin">
+                    <input ng-model="saveLogin" ng-change="onSaveLoginChange()" name="snapmdSaveLogin" type="checkbox"> Save Login
+                </label>
+		      	<div class="alert {{tokenStatus}} someTopSpace" role="alert" title="{{accessToken.access_token}}">{{tokenMessage}}</div>
+          	</div>
+      	</div>
+
+      	<div class="panel panel-default" >
+          	<div class="panel-heading">
+              GET v2/admin/log-messages
+          	</div>
+          	<div class="panel-body">
+                <input ng-model="searchText" name="snapmdSearchText" class="input-sm" type="text" size="35" placeholder="GUID or Search Text">
+                <input ng-model="messageTypes" name="snapmdMessageTypes" class="input-sm" type="text" size="10" placeholder="Error,Info">
+
+                <button type="button" class="btn btn-default btn-lg" ng-click="doGetLogMessages();">
+                    <span class="glyphicon glyphicon-thumbs-up" aria-hidden="true"></span> Get Log Messages
+                </button>
+
+                <div class="{{logMessagesStatus}} someTopSpace" role="alert">{{logMessagesMessage}} {{logMessagesData.message}}</div>
+                <div>
+                    <table ng-show="logMessagesData.data" style="width: 100%">
+                        <tr>
+                            <th></th>
+                            <th>Id</th>
+                            <th>Type</th>
+                            <th>Message</th>
+                            <th>Origin</th>
+                            <th>DateTime</th>
+                            <th>IP</th>
+                        </tr>
+                        <tr ng-repeat="x in logMessagesData.data" title="{{x.message}}">
+                            <td class="clickable" ng-click="showLogMessage(x)"><a href="javascript:void">{{$index + 1}}</a></td>
+                            <td>{{x.id}}</td>
+                            <td>{{x.messageType}}</td>
+                            <td>{{shortStr(x.message)}}</td>
+                            <td>{{shortStr(x.messageOrigin)}}</td>
+                            <td>{{x.dateStamp}}</td>
+                            <td>{{x.ipAddress}}</td>
+                        </tr>
+                    </table>
+                </div>
+              	<p class="someTopSpace">
+                    <textarea class="form-control" rows="3">{{logMessagesJson}}</textarea>
+				</p>
+            </div>
+        </div>
+    </div><!-- /.container -->
+    </form>
+
+    <div style="display: none">
+	    <div id="snapmd-root-form">
+			<div class="modal-header">
+			    <h3 class="modal-title">Snapmd Root</h3>
+			</div>
+			<div class="modal-body">
+				<div>
+					<label>Api Root:</label>
+					<input ng-model="apiRoot" class="form-control input-sm" type="text">
+
+					<label>Api Key:</label>
+					<input ng-model="apiKey" class="form-control input-sm" type="text">
+
+					<label>Developer Id:</label>
+					<input ng-model="developerId" class="form-control input-sm" type="text">
+				</div>
+			</div>
+			<div class="modal-footer">
+			    <button class="btn btn-warning" type="button" ng-click="save()">Save</button>
+			    <button class="btn btn-warning" type="button" ng-click="cancel()">Cancel</button>
+			</div>
+	    </div>
+
+        <div id="log-message-form">
+            <div class="modal-header">
+                <h3 class="modal-title">Log Message</h3>
+            </div>
+            <div class="modal-body">
+                <label>Message Id:</label>
+                <input type="text" size="35" readonly="readonly" ng-model="logMessage.id">
+
+                <div>
+                    <p class="someTopSpace">
+                        <textarea class="form-control" rows="10" ng-model="logMessageJson"></textarea>
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-warning" type="button" ng-click="close()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.14/angular.min.js"></script>
+<script src="scripts/ui-bootstrap-tpls-0.12.1.min.js"></script>
+<script src="scripts/app_log-message-viewer.js"></script>
+<script src="scripts/spin.min.js"></script>
+<script src="scripts/angular-spinner.min.js"></script>
+<script src="scripts/angular-loading-spinner.js"></script>
+</html>
